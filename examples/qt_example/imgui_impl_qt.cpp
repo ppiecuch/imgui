@@ -177,7 +177,7 @@ void ImGui_ImplQt_InvalidateDeviceObjects()
     }
 }
 
-bool    ImGui_ImplQt_Init(QtWindow* window, bool install_callbacks)
+bool    ImGui_ImplQt_Init(QtWindow* window)
 {
     g_Window = window;
 
@@ -205,10 +205,6 @@ bool    ImGui_ImplQt_Init(QtWindow* window, bool install_callbacks)
     io.RenderDrawListsFn = ImGui_ImplQt_RenderDrawLists;      // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplQt_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplQt_GetClipboardText;
-
-    if (install_callbacks)
-    {
-    }
 
     return true;
 }

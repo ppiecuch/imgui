@@ -99,7 +99,7 @@ public:
     	m_cursor_pos = QPoint(event->x(), event->y());
 		Qt::KeyboardModifiers modifiers = event->modifiers();
 		if (event->button() == Qt::LeftButton) {
-
+			ImGui_ImplQt_MouseButtonCallback(this, 0, m_cursor_pos.x(), m_cursor_pos.y());
 		}
 		m_last_mouse_button = QT_RELEASE;
 	}
@@ -183,7 +183,10 @@ public slots:
 
 void qtSetInputMode(QtWindow *window, int input, int mode)
 {
-	window->setCursor( QCursor( Qt::BlankCursor ) );
+	switch (mode) {
+		case QT_CURSOR_HIDDEN: window->setCursor( QCursor( Qt::BlankCursor ) ); break;
+		case QT_CURSOR_NORMAL: window->setCursor( QCursor( Qt::ArrowCursor ) ); break;
+	}
 }
 
 bool qtGetWindowAttrib(QtWindow *window, int attr)
@@ -242,7 +245,7 @@ int main(int argc, char **argv)
 	window->show();
 
     // Setup ImGui binding
-    ImGui_ImplQt_Init(window, true);
+    ImGui_ImplQt_Init(window);
 
     // Load Fonts
     // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
@@ -254,9 +257,9 @@ int main(int argc, char **argv)
     //io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f);
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 
+    __block bool show_test_window = true;
+    __block bool show_another_window = false;
 	window->setRenderBlock(^ void {
-    	bool show_test_window = true;
-    	bool show_another_window = false;
     	ImVec4 clear_color = ImColor(114, 144, 154);
 
         ImGui_ImplQt_NewFrame();

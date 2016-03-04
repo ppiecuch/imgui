@@ -15,7 +15,7 @@ extern void qtSetInputMode(QtWindow *window, int input, int mode);
 extern double qtGetTime();
 
 
-IMGUI_API bool        ImGui_ImplQt_Init(QtWindow* window, bool install_callbacks);
+IMGUI_API bool        ImGui_ImplQt_Init(QtWindow* window);
 IMGUI_API void        ImGui_ImplQt_Shutdown();
 IMGUI_API void        ImGui_ImplQt_NewFrame();
 
@@ -23,7 +23,7 @@ IMGUI_API void        ImGui_ImplQt_NewFrame();
 IMGUI_API void        ImGui_ImplQt_InvalidateDeviceObjects();
 IMGUI_API bool        ImGui_ImplQt_CreateDeviceObjects();
 
-// GLFW callbacks (installed by default if you enable 'install_callbacks' during initialization)
+// Qt callbacks
 // Provided here if you want to chain callbacks.
 // You can also handle inputs yourself and use those as a reference.
 IMGUI_API void        ImGui_ImplQt_MouseButtonCallback(QtWindow* window, int button, int action, int mods);
