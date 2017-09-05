@@ -4,7 +4,6 @@
 #include <imgui.h>
 #include "imgui_impl_dx11.h"
 #include <d3d11.h>
-#include <d3dcompiler.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 #include <tchar.h>
@@ -64,27 +63,6 @@ HRESULT CreateDeviceD3D(HWND hWnd)
     const D3D_FEATURE_LEVEL featureLevelArray[1] = { D3D_FEATURE_LEVEL_11_0, };
     if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 1, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext) != S_OK)
         return E_FAIL;
-
-    // Setup rasterizer
-    {
-        D3D11_RASTERIZER_DESC RSDesc;
-        memset(&RSDesc, 0, sizeof(D3D11_RASTERIZER_DESC));
-        RSDesc.FillMode = D3D11_FILL_SOLID;
-        RSDesc.CullMode = D3D11_CULL_NONE;
-        RSDesc.FrontCounterClockwise = FALSE;
-        RSDesc.DepthBias = 0;
-        RSDesc.SlopeScaledDepthBias = 0.0f;
-        RSDesc.DepthBiasClamp = 0;
-        RSDesc.DepthClipEnable = TRUE;
-        RSDesc.ScissorEnable = TRUE;
-        RSDesc.AntialiasedLineEnable = FALSE;
-        RSDesc.MultisampleEnable = (sd.SampleDesc.Count > 1) ? TRUE : FALSE;
-
-        ID3D11RasterizerState* pRState = NULL;
-        g_pd3dDevice->CreateRasterizerState(&RSDesc, &pRState);
-        g_pd3dDeviceContext->RSSetState(pRState);
-        pRState->Release();
-    }
 
     CreateRenderTarget();
 
@@ -192,23 +170,24 @@ int main(int, char**)
         // 2. Show another simple window, this time using an explicit Begin/End pair
         if (show_another_window)
         {
-            ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
             ImGui::Begin("Another Window", &show_another_window);
-            ImGui::Text("Hello");
+            ImGui::Text("Hello from another window!");
             ImGui::End();
         }
 
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
         if (show_test_window)
         {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
             ImGui::ShowTestWindow(&show_test_window);
         }
 
         // Rendering
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_col);
         ImGui::Render();
-        g_pSwapChain->Present(0, 0);
+
+        g_pSwapChain->Present(1, 0); // Present with vsync
+        //g_pSwapChain->Present(0, 0); // Present without vsync
     }
 
     ImGui_ImplDX11_Shutdown();
