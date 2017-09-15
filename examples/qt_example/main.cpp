@@ -206,8 +206,8 @@ void qtGetWindowSize(QtWindow *window, int *w, int *h)
 
 void qtGetFramebufferSize(QtWindow *window, int *w, int *h)
 {
-	*w = window->width();
-	*h = window->height();
+	*w = window->width()*window->devicePixelRatio();
+	*h = window->height()*window->devicePixelRatio();
 }
 
 void qtGetCursorPos(QtWindow *window, double *mx, double *my)
