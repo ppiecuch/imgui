@@ -71,7 +71,9 @@ public:
 			m_render();
 	}
 
-	void initialize() { }
+	void initialize() {
+		setTitle(QString("ImGui OpenGL2 example [Qt %1 - %2 (%3)]").arg(QT_VERSION_STR).arg((const char*)glGetString(GL_VERSION)).arg((const char*)glGetString(GL_RENDERER)));
+    }
 	void update() { renderLater(); }
 	void render()
 	{
@@ -241,7 +243,6 @@ int main(int argc, char **argv)
 
 	QtWindow *window = new QtWindow;
 	window->resize(1280, 720);
-	window->setTitle("ImGui OpenGL2 example");
 	window->show();
 
     // Setup ImGui binding
