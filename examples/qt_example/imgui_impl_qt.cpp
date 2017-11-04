@@ -8,7 +8,7 @@
 #include "imgui_impl_qt.h"
 
 // Qt
-#include <QtOpenGL/qgl.h>
+#include <qopengl.h>
 
 // Data
 static QtWindow*    g_Window = NULL;

@@ -12,10 +12,6 @@ UI_DIR = build$$DBG-$$[QMAKE_SPEC]/$$TARGET
 RCC_DIR = build$$DBG-$$[QMAKE_SPEC]/$$TARGET
 
 
-SOURCES += \
-	imgui_impl_qt.cpp main.cpp \
-	../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
+SOURCES += main.cpp ../../imgui_demo.cpp
 
-HEADERS += imgui_impl_qt.h
-
-INCLUDEPATH += ../../
+include("imgui.pri")
