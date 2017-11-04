@@ -241,35 +241,43 @@ static bool IsAnyMouseButtonDown()
     return false;
 }
 
+// Process Win32 mouse/keyboard inputs. 
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+// PS: In this Win32 handler, we use the capture API (GetCapture/SetCapture/ReleaseCapture) to be able to read mouse coordinations when dragging mouse outside of our window bounds.
 IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
     case WM_LBUTTONDOWN:
-        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
-        io.MouseDown[0] = true;
-        return 0;
     case WM_RBUTTONDOWN:
-        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
-        io.MouseDown[1] = true;
-        return 0;
     case WM_MBUTTONDOWN:
-        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
-        io.MouseDown[2] = true;
+    {
+        int button = 0;
+        if (msg == WM_LBUTTONDOWN) button = 0;
+        if (msg == WM_RBUTTONDOWN) button = 1;
+        if (msg == WM_MBUTTONDOWN) button = 2;
+        if (!IsAnyMouseButtonDown() && GetCapture() == NULL)
+            SetCapture(hwnd);
+        io.MouseDown[button] = true;
         return 0;
+    }
     case WM_LBUTTONUP:
-        io.MouseDown[0] = false;
-        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
-        return 0;
     case WM_RBUTTONUP:
-        io.MouseDown[1] = false;
-        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
-        return 0;
     case WM_MBUTTONUP:
-        io.MouseDown[2] = false;
-        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
+    {
+        int button = 0;
+        if (msg == WM_LBUTTONUP) button = 0;
+        if (msg == WM_RBUTTONUP) button = 1;
+        if (msg == WM_MBUTTONUP) button = 2;
+        io.MouseDown[button] = false;
+        if (!IsAnyMouseButtonDown() && GetCapture() == hwnd)
+            ReleaseCapture();
         return 0;
+    }
     case WM_MOUSEWHEEL:
         io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         return 0;
@@ -604,6 +612,6 @@ void ImGui_ImplDX11_NewFrame()
     if (io.MouseDrawCursor)
         SetCursor(NULL);
 
-    // Start the frame
+    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }
