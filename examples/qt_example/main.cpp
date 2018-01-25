@@ -16,10 +16,33 @@
 #include <qapplication.h>
 
 
+class QImgui // Imgui interface
+{
+public:
+    virtual QPoint cursorPos() = 0;
+    virtual void setCursor(const QCursor &newCursor) = 0;
+    virtual bool isActive() = 0;
+    virtual qreal devicePixelRatio() = 0;
+    virtual int mouseButtonState(int button) = 0;
+    virtual int width() = 0;
+    virtual int height() = 0;
+};
+
 class QtWindow : public QWindow, protected QOpenGLFunctions
 {
-   Q_OBJECT
-   typedef void (^RenderBlock)();
+    Q_OBJECT
+    typedef void (^RenderBlock)();
+public:
+    class qtImgui : public QImgui
+    {
+        QPoint cursorPos() {}
+        void setCursor(const QCursor &newCursor) {}
+        bool isActive() {}
+        qreal devicePixelRatio() {}
+        int mouseButtonState(int button) {}
+        int width() {}
+        int height() {};
+    } qtImguiWin;
 private:
     bool m_update_pending;
     bool m_auto_refresh;
@@ -50,6 +73,8 @@ public:
 
     bool done() const { return m_done; }
     void setDone(bool done) { m_done = done; }
+
+    QImgui *imgui() { return &qtImguiWin; }
 public:
 	QtWindow(QWindow *parent = 0) : QWindow(parent)
     , m_update_pending(false)
@@ -101,7 +126,7 @@ public:
     	m_cursor_pos = QPoint(event->x(), event->y());
 		Qt::KeyboardModifiers modifiers = event->modifiers();
 		if (event->button() == Qt::LeftButton) {
-			ImGui_ImplQt_MouseButtonCallback(this, 0, m_cursor_pos.x(), m_cursor_pos.y());
+			ImGui_ImplQt_MouseButtonCallback(imgui(), 0, m_cursor_pos.x(), m_cursor_pos.y());
 		}
 		m_last_mouse_button = QT_RELEASE;
 	}
@@ -183,7 +208,7 @@ public slots:
 	}
 };
 
-void qtSetInputMode(QtWindow *window, int input, int mode)
+void qtSetInputMode(QImgui *window, int input, int mode)
 {
 	switch (mode) {
 		case QT_CURSOR_HIDDEN: window->setCursor( QCursor( Qt::BlankCursor ) ); break;
@@ -191,7 +216,7 @@ void qtSetInputMode(QtWindow *window, int input, int mode)
 	}
 }
 
-bool qtGetWindowAttrib(QtWindow *window, int attr)
+bool qtGetWindowAttrib(QImgui *window, int attr)
 {
 	switch(attr)
 	{
@@ -200,30 +225,30 @@ bool qtGetWindowAttrib(QtWindow *window, int attr)
 	return false;
 }
 
-void qtGetWindowSize(QtWindow *window, int *w, int *h)
+void qtGetWindowSize(QImgui *window, int *w, int *h)
 {
 	*w = window->width();
 	*h = window->height();
 }
 
-void qtGetFramebufferSize(QtWindow *window, int *w, int *h)
+void qtGetFramebufferSize(QImgui *window, int *w, int *h)
 {
 	*w = window->width()*window->devicePixelRatio();
 	*h = window->height()*window->devicePixelRatio();
 }
 
-void qtGetCursorPos(QtWindow *window, double *mx, double *my)
+void qtGetCursorPos(QImgui *window, double *mx, double *my)
 {
 	*mx = window->cursorPos().x();
 	*my = window->cursorPos().y();
 }
 
-int qtGetMouseButton(QtWindow *window, int button)
+int qtGetMouseButton(QImgui *window, int button)
 {
 	return window->mouseButtonState(button);
 }
 
-void qtSwapBuffers(QtWindow *window)
+void qtSwapBuffers(QImgui *window)
 {
 }
 
@@ -232,7 +257,7 @@ double qtGetTime()
 	static QElapsedTimer timer;
 	if (!timer.isValid())
 		timer.start();
-	return timer.elapsed() / 1000;	
+	return timer.elapsed() / 1000;
 }
 
 
@@ -246,7 +271,7 @@ int main(int argc, char **argv)
 	window->show();
 
     // Setup ImGui binding
-    ImGui_ImplQt_Init(window);
+    ImGui_ImplQt_Init(window->imgui());
 
     // Load Fonts
     // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
@@ -295,7 +320,7 @@ int main(int argc, char **argv)
 
         // Rendering
         int display_w, display_h;
-        qtGetFramebufferSize(window, &display_w, &display_h);
+        qtGetFramebufferSize(window->imgui(), &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -305,7 +330,7 @@ int main(int argc, char **argv)
     while (!window->done())
     {
 		app->processEvents();
-        qtSwapBuffers(window);
+        qtSwapBuffers(window->imgui());
     }
 
     // Cleanup

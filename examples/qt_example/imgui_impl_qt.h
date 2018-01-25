@@ -4,18 +4,18 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-class QtWindow;
+class QImgui;
 
-extern bool qtGetWindowAttrib(QtWindow *window, int attr);
-extern void qtGetWindowSize(QtWindow *window, int *w, int *h);
-extern void qtGetFramebufferSize(QtWindow *window, int *w, int *h);
-extern void qtGetCursorPos(QtWindow *window, double *mx, double *my);
-extern int qtGetMouseButton(QtWindow *window, int button);
-extern void qtSetInputMode(QtWindow *window, int input, int mode);
+extern bool qtGetWindowAttrib(QImgui *window, int attr);
+extern void qtGetWindowSize(QImgui *window, int *w, int *h);
+extern void qtGetFramebufferSize(QImgui *window, int *w, int *h);
+extern void qtGetCursorPos(QImgui *window, double *mx, double *my);
+extern int qtGetMouseButton(QImgui *window, int button);
+extern void qtSetInputMode(QImgui *window, int input, int mode);
 extern double qtGetTime();
 
 
-IMGUI_API bool        ImGui_ImplQt_Init(QtWindow* window);
+IMGUI_API bool        ImGui_ImplQt_Init(QImgui* window);
 IMGUI_API void        ImGui_ImplQt_Shutdown();
 IMGUI_API void        ImGui_ImplQt_NewFrame();
 
@@ -26,10 +26,10 @@ IMGUI_API bool        ImGui_ImplQt_CreateDeviceObjects();
 // Qt callbacks
 // Provided here if you want to chain callbacks.
 // You can also handle inputs yourself and use those as a reference.
-IMGUI_API void        ImGui_ImplQt_MouseButtonCallback(QtWindow* window, int button, int action, int mods);
-IMGUI_API void        ImGui_ImplQt_ScrollCallback(QtWindow* window, double xoffset, double yoffset);
-IMGUI_API void        ImGui_ImplQt_KeyCallback(QtWindow* window, int key, int scancode, int action, int mods);
-IMGUI_API void        ImGui_ImplQt_CharCallback(QtWindow* window, unsigned int c);
+IMGUI_API void        ImGui_ImplQt_MouseButtonCallback(QImgui* window, int button, int action, int mods);
+IMGUI_API void        ImGui_ImplQt_ScrollCallback(QImgui* window, double xoffset, double yoffset);
+IMGUI_API void        ImGui_ImplQt_KeyCallback(QImgui* window, int key, int scancode, int action, int mods);
+IMGUI_API void        ImGui_ImplQt_CharCallback(QImgui* window, unsigned int c);
 
 enum {
 	QT_ERR = 0,

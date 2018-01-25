@@ -11,7 +11,7 @@
 #include <qopengl.h>
 
 // Data
-static QtWindow*    g_Window = NULL;
+static QImgui*      g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
@@ -109,18 +109,18 @@ static void ImGui_ImplQt_SetClipboardText(void* user_data, const char* text)
 	// ToDo
 }
 
-void ImGui_ImplQt_MouseButtonCallback(QtWindow*, int button, int action, int /*mods*/)
+void ImGui_ImplQt_MouseButtonCallback(QImgui*, int button, int action, int /*mods*/)
 {
     if (action == QT_PRESS && button >= 0 && button < 3)
         g_MousePressed[button] = true;
 }
 
-void ImGui_ImplQt_ScrollCallback(QtWindow*, double /*xoffset*/, double yoffset)
+void ImGui_ImplQt_ScrollCallback(QImgui*, double /*xoffset*/, double yoffset)
 {
     g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
-void ImGui_ImplQt_KeyCallback(QtWindow*, int key, int, int action, int mods)
+void ImGui_ImplQt_KeyCallback(QImgui*, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (action == QT_PRESS)
@@ -134,7 +134,7 @@ void ImGui_ImplQt_KeyCallback(QtWindow*, int key, int, int action, int mods)
     io.KeyAlt = io.KeysDown[QT_KEY_LEFT_ALT] || io.KeysDown[QT_KEY_RIGHT_ALT];
 }
 
-void ImGui_ImplQt_CharCallback(QtWindow*, unsigned int c)
+void ImGui_ImplQt_CharCallback(QImgui*, unsigned int c)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (c > 0 && c < 0x10000)
@@ -177,7 +177,7 @@ void ImGui_ImplQt_InvalidateDeviceObjects()
     }
 }
 
-bool    ImGui_ImplQt_Init(QtWindow* window)
+bool    ImGui_ImplQt_Init(QImgui* window)
 {
     g_Window = window;
 
