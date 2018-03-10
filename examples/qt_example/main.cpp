@@ -315,7 +315,7 @@ int main(int argc, char **argv)
         if (show_test_window)
         {
             ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
-            ImGui::ShowTestWindow(&show_test_window);
+            ImGui::ShowTestWindow();
         }
 
         // Rendering

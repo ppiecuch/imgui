@@ -212,7 +212,6 @@ bool    ImGui_ImplQt_Init(QImgui* window)
 void ImGui_ImplQt_Shutdown()
 {
     ImGui_ImplQt_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 void ImGui_ImplQt_NewFrame()
