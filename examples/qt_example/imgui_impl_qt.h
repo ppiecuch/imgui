@@ -18,6 +18,7 @@ extern double qtGetTime();
 IMGUI_API bool        ImGui_ImplQt_Init(QImgui* window);
 IMGUI_API void        ImGui_ImplQt_Shutdown();
 IMGUI_API void        ImGui_ImplQt_NewFrame();
+IMGUI_API void        ImGui_ImplQt_RenderRawData(ImDrawData* draw_data);
 
 // Use if you want to reset your rendering device without losing ImGui state.
 IMGUI_API void        ImGui_ImplQt_InvalidateDeviceObjects();
@@ -60,8 +61,10 @@ enum {
 	QT_KEY_DELETE,
 	QT_KEY_HOME,
 	QT_KEY_END,
+	QT_KEY_INSERT,
 	QT_KEY_TAB,
 	QT_KEY_ESCAPE,
+	QT_KEY_SPACE,
 	QT_KEY_BACKSPACE,
 	QT_KEY_ENTER,
 	QT_KEY_A,

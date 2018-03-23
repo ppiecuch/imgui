@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 // Qt
+#include <qdebug.h>
 #include <qelapsedtimer.h>
 #include <qopenglcontext.h>
 #include <qopenglpaintdevice.h>
@@ -35,13 +36,17 @@ class QtWindow : public QWindow, protected QOpenGLFunctions
 public:
     class qtImgui : public QImgui
     {
-        QPoint cursorPos() {}
-        void setCursor(const QCursor &newCursor) {}
-        bool isActive() {}
-        qreal devicePixelRatio() {}
-        int mouseButtonState(int button) {}
-        int width() {}
-        int height() {};
+        public:
+            qtImgui(QtWindow *win):w(win) {}
+            QPoint cursorPos() { return w->cursorPos(); }
+            void setCursor(const QCursor &newCursor) { w->setCursor(newCursor); }
+            bool isActive() { return w->isActive(); }
+            qreal devicePixelRatio() { return w->devicePixelRatio(); }
+            int mouseButtonState(int button) { return w->mouseButtonState(button); }
+            int width() { return w->width(); }
+            int height() { return w->height(); };
+        public:
+            QtWindow *w;
     } qtImguiWin;
 private:
     bool m_update_pending;
@@ -77,6 +82,7 @@ public:
     QImgui *imgui() { return &qtImguiWin; }
 public:
 	QtWindow(QWindow *parent = 0) : QWindow(parent)
+    , qtImguiWin(this)
     , m_update_pending(false)
     , m_auto_refresh(true)
     , m_should_close(true)
@@ -271,7 +277,11 @@ int main(int argc, char **argv)
 	window->show();
 
     // Setup ImGui binding
+    ImGui::CreateContext();
+    // Setup ImGui binding
     ImGui_ImplQt_Init(window->imgui());
+    // Setup style
+    ImGui::StyleColorsDark();
 
     // Load Fonts
     // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
@@ -283,7 +293,7 @@ int main(int argc, char **argv)
     //io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f);
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 
-    __block bool show_test_window = true;
+    __block bool show_demo_window = true;
     __block bool show_another_window = false;
 	window->setRenderBlock(^ void {
     	ImVec4 clear_color = ImColor(114, 144, 154);
@@ -297,7 +307,7 @@ int main(int argc, char **argv)
             ImGui::Text("Hello, world!");
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             ImGui::ColorEdit3("clear color", (float*)&clear_color);
-            if (ImGui::Button("Test Window")) show_test_window ^= 1;
+            if (ImGui::Button("Test Window")) show_demo_window ^= 1;
             if (ImGui::Button("Another Window")) show_another_window ^= 1;
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         }
@@ -306,16 +316,17 @@ int main(int argc, char **argv)
         if (show_another_window)
         {
             ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
-            ImGui::Begin("Another Window", &show_another_window);
-            ImGui::Text("Hello");
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
             ImGui::End();
         }
 
-        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
-        if (show_test_window)
+        // 3. Show the ImGui demo window. Most of the sample code is in ImGui::ShowDemoWindow(). Read its code to learn more about Dear ImGui!
+        if (show_demo_window)
         {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
-            ImGui::ShowTestWindow();
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver); // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+            ImGui::ShowDemoWindow(&show_demo_window);
         }
 
         // Rendering
@@ -324,7 +335,9 @@ int main(int argc, char **argv)
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
+        //glUseProgram(0);
         ImGui::Render();
+        ImGui_ImplQt_RenderRawData(ImGui::GetDrawData());
     });
     // Main loop
     while (!window->done())
@@ -335,6 +348,7 @@ int main(int argc, char **argv)
 
     // Cleanup
     ImGui_ImplQt_Shutdown();
+    ImGui::DestroyContext();
 
     return 0;
 }
