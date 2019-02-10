@@ -1592,8 +1592,10 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
         font_cfg.OversampleH = font_cfg.OversampleV = 1;
         font_cfg.PixelSnapH = true;
     }
-    if (font_cfg.Name[0] == '\0') strcpy(font_cfg.Name, "ProggyClean.ttf, 13px");
-    if (font_cfg.SizePixels <= 0.0f) font_cfg.SizePixels = 13.0f;
+    if (font_cfg.SizePixels <= 0.0f) 
+        font_cfg.SizePixels = 13.0f * 1.0f;
+    if (font_cfg.Name[0] == '\0') 
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf, %dpx", (int)font_cfg.SizePixels);
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
@@ -2388,38 +2390,36 @@ void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 
 ImFont::ImFont()
 {
-    Scale = 1.0f;
+    FontSize = 0.0f;
+    FallbackAdvanceX = 0.0f;
     FallbackChar = (ImWchar)'?';
     DisplayOffset = ImVec2(0.0f, 0.0f);
-    ClearOutputData();
+    FallbackGlyph = NULL;
+    ContainerAtlas = NULL;
+    ConfigData = NULL;
+    ConfigDataCount = 0;
+    DirtyLookupTables = false;
+    Scale = 1.0f;
+    Ascent = Descent = 0.0f;
+    MetricsTotalSurface = 0;
 }
 
 ImFont::~ImFont()
 {
-    // Invalidate active font so that the user gets a clear crash instead of a dangling pointer.
-    // If you want to delete fonts you need to do it between Render() and NewFrame().
-    // FIXME-CLEANUP
-    /*
-    ImGuiContext& g = *GImGui;
-    if (g.Font == this)
-        g.Font = NULL;
-    */
     ClearOutputData();
 }
 
 void    ImFont::ClearOutputData()
 {
     FontSize = 0.0f;
+    FallbackAdvanceX = 0.0f;
     Glyphs.clear();
     IndexAdvanceX.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
-    FallbackAdvanceX = 0.0f;
-    ConfigDataCount = 0;
-    ConfigData = NULL;
     ContainerAtlas = NULL;
-    Ascent = Descent = 0.0f;
     DirtyLookupTables = true;
+    Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
 }
 
@@ -3056,7 +3056,8 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
 void ImGui::RenderPixelEllipsis(ImDrawList* draw_list, ImVec2 pos, int count, ImU32 col)
 {
     ImFont* font = draw_list->_Data->Font;
-    pos.y += (float)(int)(font->DisplayOffset.y + font->Ascent + 0.5f - 1.0f);
+    const float font_scale = draw_list->_Data->FontSize / font->FontSize;
+    pos.y += (float)(int)(font->DisplayOffset.y + font->Ascent * font_scale + 0.5f - 1.0f);
     for (int dot_n = 0; dot_n < count; dot_n++)
         draw_list->AddRectFilled(ImVec2(pos.x + dot_n * 2.0f, pos.y), ImVec2(pos.x + dot_n * 2.0f + 1.0f, pos.y + 1.0f), col);
 }

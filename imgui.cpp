@@ -990,9 +990,6 @@ static const float WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduc
 //-------------------------------------------------------------------------
 
 static void             SetCurrentWindow(ImGuiWindow* window);
-static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond);
-static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond);
-static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
 static void             FindHoveredWindow();
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
@@ -1127,7 +1124,6 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     PopupRounding = ImFloor(PopupRounding * scale_factor);
     FramePadding = ImFloor(FramePadding * scale_factor);
     FrameRounding = ImFloor(FrameRounding * scale_factor);
-    TabRounding = ImFloor(TabRounding * scale_factor);
     ItemSpacing = ImFloor(ItemSpacing * scale_factor);
     ItemInnerSpacing = ImFloor(ItemInnerSpacing * scale_factor);
     TouchExtraPadding = ImFloor(TouchExtraPadding * scale_factor);
@@ -1137,6 +1133,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     ScrollbarRounding = ImFloor(ScrollbarRounding * scale_factor);
     GrabMinSize = ImFloor(GrabMinSize * scale_factor);
     GrabRounding = ImFloor(GrabRounding * scale_factor);
+    TabRounding = ImFloor(TabRounding * scale_factor);
     DisplayWindowPadding = ImFloor(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImFloor(DisplaySafeAreaPadding * scale_factor);
     MouseCursorScale = ImFloor(MouseCursorScale * scale_factor);
@@ -4218,6 +4215,18 @@ bool ImGui::IsItemActive()
     return false;
 }
 
+bool ImGui::IsItemActivated()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveId)
+    {
+        ImGuiWindow* window = g.CurrentWindow;
+        if (g.ActiveId == window->DC.LastItemId && g.ActiveIdPreviousFrame != window->DC.LastItemId)
+            return true;
+    }
+    return false;
+}
+
 bool ImGui::IsItemDeactivated()
 {
     ImGuiContext& g = *GImGui;
@@ -4549,7 +4558,8 @@ static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
 static ImVec2 CalcSizeContents(ImGuiWindow* window)
 {
     if (window->Collapsed)
-        return window->SizeContents;
+        if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
+            return window->SizeContents;
     if (window->Hidden && window->HiddenFramesForResize == 0 && window->HiddenFramesRegular > 0)
         return window->SizeContents;
 
@@ -5664,7 +5674,7 @@ void ImGui::SetCurrentFont(ImFont* font)
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
-    g.FontBaseSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
+    g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale);
     g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
@@ -6035,7 +6045,7 @@ void ImGui::SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
     window->DC.CursorMaxPos.y -= window->Scroll.y;
 }
 
-static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
+void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
@@ -6070,7 +6080,7 @@ ImVec2 ImGui::GetWindowSize()
     return window->Size;
 }
 
-static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond)
+void ImGui::SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowSizeAllowFlags & cond) == 0)
@@ -6113,7 +6123,7 @@ void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiCond cond)
         SetWindowSize(window, size, cond);
 }
 
-static void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond)
+void ImGui::SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowCollapsedAllowFlags & cond) == 0)
@@ -6219,7 +6229,7 @@ void ImGui::SetNextWindowBgAlpha(float alpha)
     g.NextWindowData.BgAlphaCond = ImGuiCond_Always; // Using a Cond member for consistency (may transition all of them to single flag set for fast Clear() op)
 }
 
-// In window space (not screen space!)
+// FIXME: This is in window space (not screen space!)
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
@@ -6576,7 +6586,7 @@ void ImGui::EndGroup()
     if (group_data.AdvanceCursor)
     {
         window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.PrevLineTextBaseOffset, group_data.BackupCurrentLineTextBaseOffset);      // FIXME: Incorrect, we should grab the base offset from the *first line* of the group but it is hard to obtain now.
-        ItemSize(group_bb.GetSize(), group_data.BackupCurrentLineTextBaseOffset);
+        ItemSize(group_bb.GetSize(), 0.0f);
         ItemAdd(group_bb, 0);
     }
 
@@ -7069,11 +7079,11 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
     ImRect r_outer = GetWindowAllowedExtentRect(window);
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
     {
-        // Child menus typically request _any_ position within the parent menu item, and then our FindBestWindowPosForPopup() function will move the new menu outside the parent bounds.
+        // Child menus typically request _any_ position within the parent menu item, and then we move the new menu outside the parent bounds.
         // This is how we end up with child menus appearing (most-commonly) on the right of the parent menu.
         IM_ASSERT(g.CurrentWindow == window);
         ImGuiWindow* parent_window = g.CurrentWindowStack[g.CurrentWindowStack.Size - 2];
-        float horizontal_overlap = g.Style.ItemSpacing.x;       // We want some overlap to convey the relative depth of each menu (currently the amount of overlap is hard-coded to style.ItemSpacing.x).
+        float horizontal_overlap = g.Style.ItemInnerSpacing.x; // We want some overlap to convey the relative depth of each menu (currently the amount of overlap is hard-coded to style.ItemSpacing.x).
         ImRect r_avoid;
         if (parent_window->DC.MenuBarAppending)
             r_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
@@ -8854,7 +8864,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
     g.LogFile = ImFileOpen(filename, "ab");
     if (!g.LogFile)
     {
-        IM_ASSERT(g.LogFile != NULL); // Consider this an error
+        IM_ASSERT(0);
         return;
     }
     g.LogEnabled = true;
@@ -9332,16 +9342,18 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 // Display individual triangles/vertices. Hover on to get the corresponding triangle highlighted.
                 ImGuiListClipper clipper(pcmd->ElemCount/3); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
                 while (clipper.Step())
-                    for (int prim = clipper.DisplayStart, vtx_i = elem_offset + clipper.DisplayStart*3; prim < clipper.DisplayEnd; prim++)
+                    for (int prim = clipper.DisplayStart, idx_i = elem_offset + clipper.DisplayStart*3; prim < clipper.DisplayEnd; prim++)
                     {
                         char buf[300];
                         char *buf_p = buf, *buf_end = buf + IM_ARRAYSIZE(buf);
                         ImVec2 triangles_pos[3];
-                        for (int n = 0; n < 3; n++, vtx_i++)
+                        for (int n = 0; n < 3; n++, idx_i++)
                         {
-                            ImDrawVert& v = draw_list->VtxBuffer[idx_buffer ? idx_buffer[vtx_i] : vtx_i];
+                            int vtx_i = idx_buffer ? idx_buffer[idx_i] : idx_i;
+                            ImDrawVert& v = draw_list->VtxBuffer[vtx_i];
                             triangles_pos[n] = v.pos;
-                            buf_p += ImFormatString(buf_p, buf_end - buf_p, "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
+                            buf_p += ImFormatString(buf_p, buf_end - buf_p, "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n",
+                                (n == 0) ? "idx" : "   ", idx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                         }
                         ImGui::Selectable(buf, false);
                         if (ImGui::IsItemHovered())

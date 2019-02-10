@@ -582,7 +582,7 @@ struct IMGUI_API ImGuiInputTextState
     void                CursorClamp()               { StbState.cursor = ImMin(StbState.cursor, CurLenW); StbState.select_start = ImMin(StbState.select_start, CurLenW); StbState.select_end = ImMin(StbState.select_end, CurLenW); }
     bool                HasSelection() const        { return StbState.select_start != StbState.select_end; }
     void                ClearSelection()            { StbState.select_start = StbState.select_end = StbState.cursor; }
-    void                SelectAll()                 { StbState.select_start = 0; StbState.cursor = StbState.select_end = CurLenW; StbState.has_preferred_x = false; }
+    void                SelectAll()                 { StbState.select_start = 0; StbState.cursor = StbState.select_end = CurLenW; StbState.has_preferred_x = 0; }
     void                OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
 };
 
@@ -1245,10 +1245,14 @@ struct ImGuiItemHoveredDataBackup
 
 enum ImGuiTabBarFlagsPrivate_
 {
-    ImGuiTabBarFlags_DockNode                   = 1 << 20,  // [Docking: Unused in Master Branch] Part of a dock node
-    ImGuiTabBarFlags_DockNodeIsDockSpace        = 1 << 21,  // [Docking: Unused in Master Branch] Part of an explicit dockspace node node
-    ImGuiTabBarFlags_IsFocused                  = 1 << 22,
-    ImGuiTabBarFlags_SaveSettings               = 1 << 23   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
+    ImGuiTabBarFlags_DockNode                   = 1 << 20,  // Part of a dock node
+    ImGuiTabBarFlags_IsFocused                  = 1 << 21,
+    ImGuiTabBarFlags_SaveSettings               = 1 << 22   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
+};
+
+enum ImGuiTabItemFlagsPrivate_
+{
+    ImGuiTabItemFlags_NoCloseButton             = 1 << 20   // Store whether p_open is set or not, which we need to recompute WidthContents during layout.
 };
 
 // Storage for one active tab item (sizeof() 26~32 bytes)
@@ -1258,11 +1262,12 @@ struct ImGuiTabItem
     ImGuiTabItemFlags   Flags;
     int                 LastFrameVisible;
     int                 LastFrameSelected;      // This allows us to infer an ordered list of the last activated tabs with little maintenance
+    int                 NameOffset;             // When Window==NULL, offset to name within parent ImGuiTabBar::TabsNames
     float               Offset;                 // Position relative to beginning of tab
     float               Width;                  // Width currently displayed
     float               WidthContents;          // Width of actual contents, stored during BeginTabItem() call
 
-    ImGuiTabItem()      { ID = Flags = 0; LastFrameVisible = LastFrameSelected = -1; Offset = Width = WidthContents = 0.0f; }
+    ImGuiTabItem()      { ID = Flags = 0; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = WidthContents = 0.0f; }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
@@ -1287,9 +1292,16 @@ struct ImGuiTabBar
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
     short               LastTabItemIdx;         // For BeginTabItem()/EndTabItem()
+    ImVec2              FramePadding;           // style.FramePadding locked at the time of BeginTabBar()
+    ImGuiTextBuffer     TabsNames;              // For non-docking tab bar we re-append names in a contiguous buffer. 
 
     ImGuiTabBar();
-    int                 GetTabOrder(const ImGuiTabItem* tab) const { return Tabs.index_from_ptr(tab); }
+    int                 GetTabOrder(const ImGuiTabItem* tab) const  { return Tabs.index_from_ptr(tab); }
+    const char*         GetTabName(const ImGuiTabItem* tab) const 
+    {
+        IM_ASSERT(tab->NameOffset != -1 && tab->NameOffset < TabsNames.Buf.Size); 
+        return TabsNames.Buf.Data + tab->NameOffset;
+    }
 };
 
 //-----------------------------------------------------------------------------
@@ -1321,6 +1333,9 @@ namespace ImGui
     IMGUI_API float         GetWindowScrollMaxX(ImGuiWindow* window);
     IMGUI_API float         GetWindowScrollMaxY(ImGuiWindow* window);
     IMGUI_API ImRect        GetWindowAllowedExtentRect(ImGuiWindow* window);
+    IMGUI_API void          SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond);
+    IMGUI_API void          SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond);
+    IMGUI_API void          SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
 
     IMGUI_API void          SetCurrentFont(ImFont* font);
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
@@ -1418,7 +1433,7 @@ namespace ImGui
     IMGUI_API bool          TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags);
     IMGUI_API ImVec2        TabItemCalcSize(const char* label, bool has_close_button);
     IMGUI_API void          TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImU32 col);
-    IMGUI_API bool          TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, const char* label, ImGuiID tab_id, ImGuiID close_button_id);
+    IMGUI_API bool          TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImVec2 frame_padding, const char* label, ImGuiID tab_id, ImGuiID close_button_id);
 
     // Render helpers
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.
@@ -1478,7 +1493,7 @@ namespace ImGui
     IMGUI_API void          ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags flags);
 
     // Plot
-    IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
+    IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 frame_size);
 
     // Shade functions (write over already created vertices)
     IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);

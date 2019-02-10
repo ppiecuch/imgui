@@ -1420,7 +1420,7 @@ static void ShowDemoWindowWidgets()
         static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
         ImGui::RadioButton("Text", &item_type, 0);
         ImGui::RadioButton("Button", &item_type, 1);
-        ImGui::RadioButton("CheckBox", &item_type, 2);
+        ImGui::RadioButton("Checkbox", &item_type, 2);
         ImGui::RadioButton("SliderFloat", &item_type, 3);
         ImGui::RadioButton("ColorEdit4", &item_type, 4);
         ImGui::RadioButton("ListBox", &item_type, 5);
@@ -1428,7 +1428,7 @@ static void ShowDemoWindowWidgets()
         bool ret = false;
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
         if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
-        if (item_type == 2) { ret = ImGui::Checkbox("ITEM: CheckBox", &b); }                            // Testing checkbox
+        if (item_type == 2) { ret = ImGui::Checkbox("ITEM: Checkbox", &b); }                            // Testing checkbox
         if (item_type == 3) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
         if (item_type == 4) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
         if (item_type == 5) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
@@ -1442,6 +1442,7 @@ static void ShowDemoWindowWidgets()
             "IsItemHovered(_RectOnly) = %d\n"
             "IsItemActive() = %d\n"
             "IsItemEdited() = %d\n"
+            "IsItemActivated() = %d\n"
             "IsItemDeactivated() = %d\n"
             "IsItemDeactivatedEdit() = %d\n"
             "IsItemVisible() = %d\n"
@@ -1457,6 +1458,7 @@ static void ShowDemoWindowWidgets()
             ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
             ImGui::IsItemActive(),
             ImGui::IsItemEdited(),
+            ImGui::IsItemActivated(),
             ImGui::IsItemDeactivated(),
             ImGui::IsItemDeactivatedAfterEdit(),
             ImGui::IsItemVisible(),
@@ -1774,6 +1776,7 @@ static void ShowDemoWindowLayout()
             static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable;
             ImGui::CheckboxFlags("ImGuiTabBarFlags_Reorderable", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_Reorderable);
             ImGui::CheckboxFlags("ImGuiTabBarFlags_AutoSelectNewTabs", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_AutoSelectNewTabs);
+            ImGui::CheckboxFlags("ImGuiTabBarFlags_TabListPopupButton", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_TabListPopupButton);
             ImGui::CheckboxFlags("ImGuiTabBarFlags_NoCloseWithMiddleMouseButton", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_NoCloseWithMiddleMouseButton);
             if ((tab_bar_flags & ImGuiTabBarFlags_FittingPolicyMask_) == 0)
                 tab_bar_flags |= ImGuiTabBarFlags_FittingPolicyDefault_;
@@ -2735,8 +2738,13 @@ void ImGui::ShowFontSelector(const char* label)
     if (ImGui::BeginCombo(label, font_current->GetDebugName()))
     {
         for (int n = 0; n < io.Fonts->Fonts.Size; n++)
-            if (ImGui::Selectable(io.Fonts->Fonts[n]->GetDebugName(), io.Fonts->Fonts[n] == font_current))
-                io.FontDefault = io.Fonts->Fonts[n];
+        {
+            ImFont* font = io.Fonts->Fonts[n];
+            ImGui::PushID((void*)font);
+            if (ImGui::Selectable(font->GetDebugName(), font == font_current))
+                io.FontDefault = font;
+            ImGui::PopID();
+        }
         ImGui::EndCombo();
     }
     ImGui::SameLine();
@@ -2793,7 +2801,6 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         {
             ImGui::Text("Main");
             ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
-            ImGui::SliderFloat("PopupRounding", &style.PopupRounding, 0.0f, 16.0f, "%.0f");
             ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
             ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
             ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
@@ -2811,6 +2818,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("ChildRounding", &style.ChildRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f");
+            ImGui::SliderFloat("PopupRounding", &style.PopupRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("ScrollbarRounding", &style.ScrollbarRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("GrabRounding", &style.GrabRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("TabRounding", &style.TabRounding, 0.0f, 12.0f, "%.0f");
@@ -2882,7 +2890,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
         if (ImGui::BeginTabItem("Fonts"))
         {
-            ImFontAtlas* atlas = ImGui::GetIO().Fonts;
+            ImGuiIO& io = ImGui::GetIO();
+            ImFontAtlas* atlas = io.Fonts;
             ShowHelpMarker("Read FAQ and misc/fonts/README.txt for details on font loading.");
             ImGui::PushItemWidth(120);
             for (int i = 0; i < atlas->Fonts.Size; i++)
@@ -2890,7 +2899,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 ImFont* font = atlas->Fonts[i];
                 ImGui::PushID(font);
                 bool font_details_opened = ImGui::TreeNode(font, "Font %d: \"%s\"\n%.2f px, %d glyphs, %d file(s)", i, font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size, font->ConfigDataCount);
-                ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) ImGui::GetIO().FontDefault = font;
+                ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) { io.FontDefault = font; }
                 if (font_details_opened)
                 {
                     ImGui::PushFont(font);
@@ -2901,7 +2910,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                     ImGui::InputFloat("Font offset", &font->DisplayOffset.y, 1, 1, "%.0f");
                     ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
                     ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
-                    ImGui::Text("Texture surface: %d pixels (approx) ~ %dx%d", font->MetricsTotalSurface, (int)sqrtf((float)font->MetricsTotalSurface), (int)sqrtf((float)font->MetricsTotalSurface));
+                    const float surface_sqrt = sqrtf((float)font->MetricsTotalSurface);
+                    ImGui::Text("Texture surface: %d pixels (approx) ~ %dx%d", font->MetricsTotalSurface, (int)surface_sqrt, (int)surface_sqrt);
                     for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
                         if (ImFontConfig* cfg = &font->ConfigData[config_i])
                             ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
@@ -2955,9 +2965,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             }
 
             static float window_scale = 1.0f;
-            if (ImGui::DragFloat("this window scale", &window_scale, 0.005f, 0.3f, 2.0f, "%.1f"))           // scale only this window
+            if (ImGui::DragFloat("this window scale", &window_scale, 0.005f, 0.3f, 2.0f, "%.2f"))   // scale only this window
                 ImGui::SetWindowFontScale(window_scale);
-            ImGui::DragFloat("global scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f");  // scale everything
+            ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f");      // scale everything
             ImGui::PopItemWidth();
 
             ImGui::EndTabItem();
@@ -3793,10 +3803,12 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
     const float DISTANCE = 10.0f;
     static int corner = 0;
     ImGuiIO& io = ImGui::GetIO();
-    ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE);
-    ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
     if (corner != -1)
+    {
+        ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE);
+        ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+    }
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
     if (ImGui::Begin("Example: Simple overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
     {
@@ -3889,7 +3901,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             float th = (n == 0) ? 1.0f : thickness;
             draw_list->AddCircle(ImVec2(x+sz*0.5f, y+sz*0.5f), sz*0.5f, col32, 6, th); x += sz+spacing;     // Hexagon
             draw_list->AddCircle(ImVec2(x+sz*0.5f, y+sz*0.5f), sz*0.5f, col32, 20, th); x += sz+spacing;    // Circle
-            draw_list->AddRect(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, 0.0f, ImDrawCornerFlags_All, th); x += sz+spacing;
+            draw_list->AddRect(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, 0.0f,  ImDrawCornerFlags_All, th); x += sz+spacing;
             draw_list->AddRect(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, 10.0f, ImDrawCornerFlags_All, th); x += sz+spacing;
             draw_list->AddRect(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, 10.0f, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_BotRight, th); x += sz+spacing;
             draw_list->AddTriangle(ImVec2(x+sz*0.5f, y), ImVec2(x+sz,y+sz-0.5f), ImVec2(x,y+sz-0.5f), col32, th); x += sz+spacing;
