@@ -1,4 +1,4 @@
-// dear imgui, v1.68 WIP
+// dear imgui, v1.69 WIP
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating Dear ImGui into their code base:
@@ -62,7 +62,6 @@ Index of this file:
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#define vsnprintf _vsnprintf
 #endif
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wold-style-cast"             // warning : use of old-style cast                              // yes, they are more terse.
@@ -70,6 +69,7 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"   // warning : cast to 'void *' from smaller integer type 'int'
 #pragma clang diagnostic ignored "-Wformat-security"            // warning : warning: format string is not a string literal
 #pragma clang diagnostic ignored "-Wexit-time-destructors"      // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
+#pragma clang diagnostic ignored "-Wunused-macros"              // warning : warning: macro is not used                         // we define snprintf/vsnprintf on Windows so they are available, but not always used.
 #if __has_warning("-Wzero-as-null-pointer-constant")
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning : zero as null pointer constant                  // some standard header variations use #define NULL 0
 #endif
@@ -91,9 +91,11 @@ Index of this file:
 
 // Play it nice with Windows users. Notepad in 2017 still doesn't display text data with Unix-style \n.
 #ifdef _WIN32
-#define IM_NEWLINE "\r\n"
+#define IM_NEWLINE  "\r\n"
+#define snprintf    _snprintf
+#define vsnprintf   _vsnprintf
 #else
-#define IM_NEWLINE "\n"
+#define IM_NEWLINE  "\n"
 #endif
 
 #define IM_MAX(_A,_B)       (((_A) >= (_B)) ? (_A) : (_B))
@@ -893,6 +895,25 @@ static void ShowDemoWindowWidgets()
             }
             ImGui::TreePop();
         }
+        if (ImGui::TreeNode("Alignment"))
+        {
+            ShowHelpMarker("Alignment applies when a selectable is larger than its text content.\nBy default, Selectables uses style.SelectableTextAlign but it can be overriden on a per-item basis using PushStyleVar().");
+            static bool selected[3*3] = { true, false, true, false, true, false, true, false, true };
+            for (int y = 0; y < 3; y++)
+            {
+                for (int x = 0; x < 3; x++)
+                {
+                    ImVec2 alignment = ImVec2((float)x / 2.0f, (float)y / 2.0f);
+                    char name[32];
+                    sprintf(name, "(%.1f,%.1f)", alignment.x, alignment.y);
+                    if (x > 0) ImGui::SameLine();
+                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                    ImGui::Selectable(name, &selected[3*y+x], ImGuiSelectableFlags_None, ImVec2(80,80));
+                    ImGui::PopStyleVar();
+                }
+            }
+            ImGui::TreePop();
+        }
         ImGui::TreePop();
     }
 
@@ -1005,7 +1026,7 @@ static void ShowDemoWindowWidgets()
 
     if (ImGui::TreeNode("Color/Picker Widgets"))
     {
-        static ImVec4 color = ImColor(114, 144, 154, 200);
+        static ImVec4 color = ImVec4(114.0f/255.0f, 144.0f/255.0f, 154.0f/255.0f, 200.0f/255.0f);
 
         static bool alpha_preview = true;
         static bool alpha_half_preview = false;
@@ -1024,7 +1045,7 @@ static void ShowDemoWindowWidgets()
         ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
 
         ImGui::Text("Color widget HSV with Alpha:");
-        ImGui::ColorEdit4("MyColor##2", (float*)&color, ImGuiColorEditFlags_HSV | misc_flags);
+        ImGui::ColorEdit4("MyColor##2", (float*)&color, ImGuiColorEditFlags_DisplayHSV | misc_flags);
 
         ImGui::Text("Color widget with Float Display:");
         ImGui::ColorEdit4("MyColor##2f", (float*)&color, ImGuiColorEditFlags_Float | misc_flags);
@@ -1106,7 +1127,7 @@ static void ShowDemoWindowWidgets()
         static bool side_preview = true;
         static bool ref_color = false;
         static ImVec4 ref_color_v(1.0f,0.0f,1.0f,0.5f);
-        static int inputs_mode = 2;
+        static int display_mode = 0;
         static int picker_mode = 0;
         ImGui::Checkbox("With Alpha", &alpha);
         ImGui::Checkbox("With Alpha Bar", &alpha_bar);
@@ -1121,25 +1142,26 @@ static void ShowDemoWindowWidgets()
                 ImGui::ColorEdit4("##RefColor", &ref_color_v.x, ImGuiColorEditFlags_NoInputs | misc_flags);
             }
         }
-        ImGui::Combo("Inputs Mode", &inputs_mode, "All Inputs\0No Inputs\0RGB Input\0HSV Input\0HEX Input\0");
+        ImGui::Combo("Display Mode", &display_mode, "Auto/Current\0None\0RGB Only\0HSV Only\0Hex Only\0");
+        ImGui::SameLine(); ShowHelpMarker("ColorEdit defaults to displaying RGB inputs if you don't specify a display mode, but the user can change it with a right-click.\n\nColorPicker defaults to displaying RGB+HSV+Hex if you don't specify a display mode.\n\nYou can change the defaults using SetColorEditOptions().");
         ImGui::Combo("Picker Mode", &picker_mode, "Auto/Current\0Hue bar + SV rect\0Hue wheel + SV triangle\0");
         ImGui::SameLine(); ShowHelpMarker("User can right-click the picker to change mode.");
         ImGuiColorEditFlags flags = misc_flags;
-        if (!alpha) flags |= ImGuiColorEditFlags_NoAlpha; // This is by default if you call ColorPicker3() instead of ColorPicker4()
-        if (alpha_bar) flags |= ImGuiColorEditFlags_AlphaBar;
-        if (!side_preview) flags |= ImGuiColorEditFlags_NoSidePreview;
-        if (picker_mode == 1) flags |= ImGuiColorEditFlags_PickerHueBar;
-        if (picker_mode == 2) flags |= ImGuiColorEditFlags_PickerHueWheel;
-        if (inputs_mode == 1) flags |= ImGuiColorEditFlags_NoInputs;
-        if (inputs_mode == 2) flags |= ImGuiColorEditFlags_RGB;
-        if (inputs_mode == 3) flags |= ImGuiColorEditFlags_HSV;
-        if (inputs_mode == 4) flags |= ImGuiColorEditFlags_HEX;
+        if (!alpha)            flags |= ImGuiColorEditFlags_NoAlpha;        // This is by default if you call ColorPicker3() instead of ColorPicker4()
+        if (alpha_bar)         flags |= ImGuiColorEditFlags_AlphaBar;
+        if (!side_preview)     flags |= ImGuiColorEditFlags_NoSidePreview;
+        if (picker_mode == 1)  flags |= ImGuiColorEditFlags_PickerHueBar;
+        if (picker_mode == 2)  flags |= ImGuiColorEditFlags_PickerHueWheel;
+        if (display_mode == 1) flags |= ImGuiColorEditFlags_NoInputs;       // Disable all RGB/HSV/Hex displays
+        if (display_mode == 2) flags |= ImGuiColorEditFlags_DisplayRGB;     // Override display mode
+        if (display_mode == 3) flags |= ImGuiColorEditFlags_DisplayHSV;
+        if (display_mode == 4) flags |= ImGuiColorEditFlags_DisplayHex;
         ImGui::ColorPicker4("MyColor##4", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
 
         ImGui::Text("Programmatically set defaults:");
         ImGui::SameLine(); ShowHelpMarker("SetColorEditOptions() is designed to allow you to set boot-time default.\nWe don't have Push/Pop functions because you can force options on a per-widget basis if needed, and the user can change non-forced ones with the options menu.\nWe don't have a getter to avoid encouraging you to persistently save values that aren't forward-compatible.");
         if (ImGui::Button("Default: Uint8 + HSV + Hue Bar"))
-            ImGui::SetColorEditOptions(ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_PickerHueBar);
+            ImGui::SetColorEditOptions(ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_DisplayHSV | ImGuiColorEditFlags_PickerHueBar);
         if (ImGui::Button("Default: Float + HDR + Hue Wheel"))
             ImGui::SetColorEditOptions(ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_PickerHueWheel);
 
@@ -1176,6 +1198,10 @@ static void ShowDemoWindowWidgets()
         ImS64 LLONG_MAX = 9223372036854775807LL;
         ImU64 ULLONG_MAX = (2ULL * 9223372036854775807LL + 1);
         #endif
+        const char    s8_zero  = 0,   s8_one  = 1,   s8_fifty  = 50, s8_min  = -128,        s8_max = 127;
+        const ImU8    u8_zero  = 0,   u8_one  = 1,   u8_fifty  = 50, u8_min  = 0,           u8_max = 255;
+        const short   s16_zero = 0,   s16_one = 1,   s16_fifty = 50, s16_min = -32768,      s16_max = 32767;
+        const ImU16   u16_zero = 0,   u16_one = 1,   u16_fifty = 50, u16_min = 0,           u16_max = 65535;
         const ImS32   s32_zero = 0,   s32_one = 1,   s32_fifty = 50, s32_min = INT_MIN/2,   s32_max = INT_MAX/2,    s32_hi_a = INT_MAX/2 - 100,    s32_hi_b = INT_MAX/2;
         const ImU32   u32_zero = 0,   u32_one = 1,   u32_fifty = 50, u32_min = 0,           u32_max = UINT_MAX/2,   u32_hi_a = UINT_MAX/2 - 100,   u32_hi_b = UINT_MAX/2;
         const ImS64   s64_zero = 0,   s64_one = 1,   s64_fifty = 50, s64_min = LLONG_MIN/2, s64_max = LLONG_MAX/2,  s64_hi_a = LLONG_MAX/2 - 100,  s64_hi_b = LLONG_MAX/2;
@@ -1184,6 +1210,10 @@ static void ShowDemoWindowWidgets()
         const double  f64_zero = 0.,  f64_one = 1.,  f64_lo_a = -1000000000000000.0, f64_hi_a = +1000000000000000.0;
 
         // State
+        static char   s8_v  = 127;
+        static ImU8   u8_v  = 255;
+        static short  s16_v = 32767;
+        static ImU16  u16_v = 65535;
         static ImS32  s32_v = -1;
         static ImU32  u32_v = (ImU32)-1;
         static ImS64  s64_v = -1;
@@ -1195,6 +1225,10 @@ static void ShowDemoWindowWidgets()
         static bool drag_clamp = false;
         ImGui::Text("Drags:");
         ImGui::Checkbox("Clamp integers to 0..50", &drag_clamp); ImGui::SameLine(); ShowHelpMarker("As with every widgets in dear imgui, we never modify values unless there is a user interaction.\nYou can override the clamping limits by using CTRL+Click to input a value.");
+        ImGui::DragScalar("drag s8",        ImGuiDataType_S8,     &s8_v,  drag_speed, drag_clamp ? &s8_zero  : NULL, drag_clamp ? &s8_fifty  : NULL);
+        ImGui::DragScalar("drag u8",        ImGuiDataType_U8,     &u8_v,  drag_speed, drag_clamp ? &u8_zero  : NULL, drag_clamp ? &u8_fifty  : NULL, "%u ms");
+        ImGui::DragScalar("drag s16",       ImGuiDataType_S16,    &s16_v, drag_speed, drag_clamp ? &s16_zero : NULL, drag_clamp ? &s16_fifty : NULL);
+        ImGui::DragScalar("drag u16",       ImGuiDataType_U16,    &u16_v, drag_speed, drag_clamp ? &u16_zero : NULL, drag_clamp ? &u16_fifty : NULL, "%u ms");
         ImGui::DragScalar("drag s32",       ImGuiDataType_S32,    &s32_v, drag_speed, drag_clamp ? &s32_zero : NULL, drag_clamp ? &s32_fifty : NULL);
         ImGui::DragScalar("drag u32",       ImGuiDataType_U32,    &u32_v, drag_speed, drag_clamp ? &u32_zero : NULL, drag_clamp ? &u32_fifty : NULL, "%u ms");
         ImGui::DragScalar("drag s64",       ImGuiDataType_S64,    &s64_v, drag_speed, drag_clamp ? &s64_zero : NULL, drag_clamp ? &s64_fifty : NULL);
@@ -1205,6 +1239,10 @@ static void ShowDemoWindowWidgets()
         ImGui::DragScalar("drag double ^2", ImGuiDataType_Double, &f64_v, 0.0005f, &f64_zero, &f64_one, "0 < %.10f < 1", 2.0f);
 
         ImGui::Text("Sliders");
+        ImGui::SliderScalar("slider s8 full",     ImGuiDataType_S8,     &s8_v,  &s8_min,   &s8_max,   "%d");
+        ImGui::SliderScalar("slider u8 full",     ImGuiDataType_U8,     &u8_v,  &u8_min,   &u8_max,   "%u");
+        ImGui::SliderScalar("slider s16 full",    ImGuiDataType_S16,    &s16_v, &s16_min,  &s16_max,  "%d");
+        ImGui::SliderScalar("slider u16 full",    ImGuiDataType_U16,    &u16_v, &u16_min,  &u16_max,  "%u");
         ImGui::SliderScalar("slider s32 low",     ImGuiDataType_S32,    &s32_v, &s32_zero, &s32_fifty,"%d");
         ImGui::SliderScalar("slider s32 high",    ImGuiDataType_S32,    &s32_v, &s32_hi_a, &s32_hi_b, "%d");
         ImGui::SliderScalar("slider s32 full",    ImGuiDataType_S32,    &s32_v, &s32_min,  &s32_max,  "%d");
@@ -1227,6 +1265,10 @@ static void ShowDemoWindowWidgets()
         static bool inputs_step = true;
         ImGui::Text("Inputs");
         ImGui::Checkbox("Show step buttons", &inputs_step);
+        ImGui::InputScalar("input s8",      ImGuiDataType_S8,     &s8_v,  inputs_step ? &s8_one  : NULL, NULL, "%d");
+        ImGui::InputScalar("input u8",      ImGuiDataType_U8,     &u8_v,  inputs_step ? &u8_one  : NULL, NULL, "%u");
+        ImGui::InputScalar("input s16",     ImGuiDataType_S16,    &s16_v, inputs_step ? &s16_one : NULL, NULL, "%d");
+        ImGui::InputScalar("input u16",     ImGuiDataType_U16,    &u16_v, inputs_step ? &u16_one : NULL, NULL, "%u");
         ImGui::InputScalar("input s32",     ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%d");
         ImGui::InputScalar("input s32 hex", ImGuiDataType_S32,    &s32_v, inputs_step ? &s32_one : NULL, NULL, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
         ImGui::InputScalar("input u32",     ImGuiDataType_U32,    &u32_v, inputs_step ? &u32_one : NULL, NULL, "%u");
@@ -1418,20 +1460,23 @@ static void ShowDemoWindowWidgets()
         static int item_type = 1;
         static bool b = false;
         static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
+        static char str[16] = {};
         ImGui::RadioButton("Text", &item_type, 0);
         ImGui::RadioButton("Button", &item_type, 1);
         ImGui::RadioButton("Checkbox", &item_type, 2);
         ImGui::RadioButton("SliderFloat", &item_type, 3);
-        ImGui::RadioButton("ColorEdit4", &item_type, 4);
-        ImGui::RadioButton("ListBox", &item_type, 5);
+        ImGui::RadioButton("InputText", &item_type, 4);
+        ImGui::RadioButton("ColorEdit4", &item_type, 5);
+        ImGui::RadioButton("ListBox", &item_type, 6);
         ImGui::Separator();
         bool ret = false;
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
         if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
         if (item_type == 2) { ret = ImGui::Checkbox("ITEM: Checkbox", &b); }                            // Testing checkbox
         if (item_type == 3) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
-        if (item_type == 4) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
-        if (item_type == 5) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
+        if (item_type == 4) { ret = ImGui::InputText("ITEM: InputText", &str[0], IM_ARRAYSIZE(str)); }  // Testing input text (which handles tabbing)
+        if (item_type == 5) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
+        if (item_type == 6) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
         ImGui::BulletText(
             "Return value = %d\n"
             "IsItemFocused() = %d\n"
@@ -2825,6 +2870,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::Text("Alignment");
             ImGui::SliderFloat2("WindowTitleAlign", (float*)&style.WindowTitleAlign, 0.0f, 1.0f, "%.2f");
             ImGui::SliderFloat2("ButtonTextAlign", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f"); ImGui::SameLine(); ShowHelpMarker("Alignment applies when a button is larger than its text content.");
+            ImGui::SliderFloat2("SelectableTextAlign", (float*)&style.SelectableTextAlign, 0.0f, 1.0f, "%.2f"); ImGui::SameLine(); ShowHelpMarker("Alignment applies when a selectable is larger than its text content.");
             ImGui::Text("Safe Area Padding"); ImGui::SameLine(); ShowHelpMarker("Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).");
             ImGui::SliderFloat2("DisplaySafeAreaPadding", (float*)&style.DisplaySafeAreaPadding, 0.0f, 30.0f, "%.0f");
             ImGui::EndTabItem();
@@ -2913,7 +2959,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                     const float surface_sqrt = sqrtf((float)font->MetricsTotalSurface);
                     ImGui::Text("Texture surface: %d pixels (approx) ~ %dx%d", font->MetricsTotalSurface, (int)surface_sqrt, (int)surface_sqrt);
                     for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
-                        if (ImFontConfig* cfg = &font->ConfigData[config_i])
+                        if (const ImFontConfig* cfg = &font->ConfigData[config_i])
                             ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
                     if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
                     {
@@ -3095,10 +3141,12 @@ struct ExampleAppConsole
 {
     char                  InputBuf[256];
     ImVector<char*>       Items;
-    bool                  ScrollToBottom;
+    ImVector<const char*> Commands;
     ImVector<char*>       History;
     int                   HistoryPos;    // -1: new line, 0..History.Size-1 browsing history.
-    ImVector<const char*> Commands;
+    ImGuiTextFilter       Filter;
+    bool                  AutoScroll;
+    bool                  ScrollToBottom;
 
     ExampleAppConsole()
     {
@@ -3109,6 +3157,8 @@ struct ExampleAppConsole
         Commands.push_back("HISTORY");
         Commands.push_back("CLEAR");
         Commands.push_back("CLASSIFY");  // "classify" is only here to provide an example of "C"+[tab] completing to "CL" and displaying matches.
+        AutoScroll = true;
+        ScrollToBottom = true;
         AddLog("Welcome to Dear ImGui!");
     }
     ~ExampleAppConsole()
@@ -3142,7 +3192,8 @@ struct ExampleAppConsole
         buf[IM_ARRAYSIZE(buf)-1] = 0;
         va_end(args);
         Items.push_back(Strdup(buf));
-        ScrollToBottom = true;
+        if (AutoScroll)
+            ScrollToBottom = true;
     }
 
     void    Draw(const char* title, bool* p_open)
@@ -3168,7 +3219,7 @@ struct ExampleAppConsole
 
         // TODO: display items starting from the bottom
 
-        if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
+        if (ImGui::SmallButton("Add Dummy Text"))  { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
         if (ImGui::SmallButton("Add Dummy Error")) { AddLog("[error] something went wrong"); } ImGui::SameLine();
         if (ImGui::SmallButton("Clear")) { ClearLog(); } ImGui::SameLine();
         bool copy_to_clipboard = ImGui::SmallButton("Copy"); ImGui::SameLine();
@@ -3177,10 +3228,20 @@ struct ExampleAppConsole
 
         ImGui::Separator();
 
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
-        static ImGuiTextFilter filter;
-        filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
-        ImGui::PopStyleVar();
+        // Options menu
+        if (ImGui::BeginPopup("Options"))
+        {
+            if (ImGui::Checkbox("Auto-scroll", &AutoScroll))
+                if (AutoScroll)
+                    ScrollToBottom = true;
+            ImGui::EndPopup();
+        }
+
+        // Options, Filter
+        if (ImGui::Button("Options"))
+            ImGui::OpenPopup("Options");
+        ImGui::SameLine();
+        Filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
         ImGui::Separator();
 
         const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing(); // 1 separator, 1 input text
@@ -3205,18 +3266,19 @@ struct ExampleAppConsole
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // Tighten spacing
         if (copy_to_clipboard)
             ImGui::LogToClipboard();
-        ImVec4 col_default_text = ImGui::GetStyleColorVec4(ImGuiCol_Text);
         for (int i = 0; i < Items.Size; i++)
         {
             const char* item = Items[i];
-            if (!filter.PassFilter(item))
+            if (!Filter.PassFilter(item))
                 continue;
-            ImVec4 col = col_default_text;
-            if (strstr(item, "[error]")) col = ImColor(1.0f,0.4f,0.4f,1.0f);
-            else if (strncmp(item, "# ", 2) == 0) col = ImColor(1.0f,0.78f,0.58f,1.0f);
-            ImGui::PushStyleColor(ImGuiCol_Text, col);
+
+            // Normally you would store more information in your item (e.g. make Items[] an array of structure, store color/type etc.)
+            bool pop_color = false;
+            if (strstr(item, "[error]"))            { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f)); pop_color = true; }
+            else if (strncmp(item, "# ", 2) == 0)   { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.6f, 1.0f)); pop_color = true; }
             ImGui::TextUnformatted(item);
-            ImGui::PopStyleColor();
+            if (pop_color)
+                ImGui::PopStyleColor();
         }
         if (copy_to_clipboard)
             ImGui::LogFinish();
@@ -3283,6 +3345,9 @@ struct ExampleAppConsole
         {
             AddLog("Unknown command: '%s'\n", command_line);
         }
+
+        // On commad input, we scroll to bottom even if AutoScroll==false
+        ScrollToBottom = true;
     }
 
     static int TextEditCallbackStub(ImGuiInputTextCallbackData* data) // In C++11 you are better off using lambdas for this sort of forwarding callbacks
@@ -3411,10 +3476,12 @@ struct ExampleAppLog
     ImGuiTextBuffer     Buf;
     ImGuiTextFilter     Filter;
     ImVector<int>       LineOffsets;        // Index to lines offset. We maintain this with AddLog() calls, allowing us to have a random access on lines
+    bool                AutoScroll;
     bool                ScrollToBottom;
 
     ExampleAppLog()
     {
+        AutoScroll = true;
         ScrollToBottom = false;
         Clear();
     }
@@ -3436,7 +3503,8 @@ struct ExampleAppLog
         for (int new_size = Buf.size(); old_size < new_size; old_size++)
             if (Buf[old_size] == '\n')
                 LineOffsets.push_back(old_size + 1);
-        ScrollToBottom = true;
+        if (AutoScroll)
+            ScrollToBottom = true;
     }
 
     void    Draw(const char* title, bool* p_open = NULL)
@@ -3446,13 +3514,31 @@ struct ExampleAppLog
             ImGui::End();
             return;
         }
-        if (ImGui::Button("Clear")) Clear();
+
+        // Options menu
+        if (ImGui::BeginPopup("Options"))
+        {
+            if (ImGui::Checkbox("Auto-scroll", &AutoScroll))
+                if (AutoScroll)
+                    ScrollToBottom = true;
+            ImGui::EndPopup();
+        }
+
+        // Main window
+        if (ImGui::Button("Options"))
+            ImGui::OpenPopup("Options");
+        ImGui::SameLine();
+        bool clear = ImGui::Button("Clear");
         ImGui::SameLine();
         bool copy = ImGui::Button("Copy");
         ImGui::SameLine();
         Filter.Draw("Filter", -100.0f);
+
         ImGui::Separator();
         ImGui::BeginChild("scrolling", ImVec2(0,0), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+        if (clear)
+            Clear();
         if (copy)
             ImGui::LogToClipboard();
 
@@ -3461,6 +3547,10 @@ struct ExampleAppLog
         const char* buf_end = Buf.end();
         if (Filter.IsActive())
         {
+            // In this example we don't use the clipper when Filter is enabled.
+            // This is because we don't have a random access on the result on our filter.
+            // A real application processing logs with ten of thousands of entries may want to store the result of search/filter.
+            // especially if the filtering function is not trivial (e.g. reg-exp).
             for (int line_no = 0; line_no < LineOffsets.Size; line_no++)
             {
                 const char* line_start = buf + LineOffsets[line_no];
@@ -3508,11 +3598,12 @@ static void ShowExampleAppLog(bool* p_open)
 {
     static ExampleAppLog log;
 
-    // For the demo: add a debug button before the normal log window contents
+    // For the demo: add a debug button _BEFORE_ the normal log window contents
     // We take advantage of the fact that multiple calls to Begin()/End() are appending to the same window.
+    // Most of the contents of the window will be added by the log.Draw() call.
     ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
     ImGui::Begin("Example: Log", p_open);
-    if (ImGui::SmallButton("Add 5 entries"))
+    if (ImGui::SmallButton("[Debug] Add 5 entries"))
     {
         static int counter = 0;
         for (int n = 0; n < 5; n++)
