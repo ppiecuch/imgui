@@ -1,4 +1,6 @@
 -----------------------------------------------------------------------
+ dear imgui, v1.70 WIP
+-----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)
 -----------------------------------------------------------------------
@@ -26,7 +28,7 @@ This folder contains two things:
    They are the in the XXXX_example/ sub-folders.
 
 You can find binaries of some of those example applications at:
-  http://www.miracleworld.net/imgui/binaries
+  http://www.dearimgui.org/binaries
 
 
 ---------------------------------------
@@ -102,7 +104,7 @@ List of Platforms Bindings in this repository:
     imgui_impl_osx.mm         ; macOS native API
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
     imgui_impl_win32.cpp      ; Win32 native API (Windows)
-    imgui_impl_freeglut.cpp   ; FreeGLUT (if you really miss the 90's)
+    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (not recommended unless really miss the 90's)
 
 List of Renderer Bindings in this repository:
 
@@ -111,8 +113,8 @@ List of Renderer Bindings in this repository:
     imgui_impl_dx11.cpp       ; DirectX11
     imgui_impl_dx12.cpp       ; DirectX12
     imgui_impl_metal.mm       ; Metal (with ObjC)
-    imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
-    imgui_impl_opengl3.cpp    ; OpenGL3, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
+    imgui_impl_opengl2.cpp    ; OpenGL 2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
+    imgui_impl_opengl3.cpp    ; OpenGL 3/4, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
     imgui_impl_vulkan.cpp     ; Vulkan
 
 List of high-level Frameworks Bindings in this repository: (combine Platform + Renderer)
@@ -120,13 +122,15 @@ List of high-level Frameworks Bindings in this repository: (combine Platform + R
     imgui_impl_allegro5.cpp
     imgui_impl_marmalade.cpp
 
+Note that Dear ImGui works with Emscripten. 
+The examples_emscripten/ app uses sdl.cpp + opengl3.cpp but other combinations are possible.
 Third-party framework, graphics API and languages bindings are listed at:
 
     https://github.com/ocornut/imgui/wiki/Bindings
 
     Languages: C, C#, ChaiScript, D, Go, Haxe, Java, Lua, Odin, Pascal, PureBasic, Python, Rust, Swift...
-    Frameworks: Cinder, Cocoa (OSX), Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre,
-    OpenSceneGraph, openFrameworks, LOVE, NanoRT, Nim Game Lib, Qt3d, SFML, Unreal Engine 4...
+    Frameworks: Cinder, Cocoa (OSX), Cocos2d-x, SFML, GML/GameMaker Studio, Irrlicht, Ogre, OpenSceneGraph,
+    openFrameworks, LOVE, NanoRT, Nim Game Lib, Qt3d, SFML, Unreal Engine 4...
     Miscellaneous: Software Renderer, RemoteImgui, etc.
 
 
@@ -175,6 +179,12 @@ example_apple_opengl2/
     = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
     (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
 
+example_empscripten:
+    Emcripten + SDL2 + OpenGL3+/ES2/ES3 example.
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
+    Note that other examples based on SDL or GLFW + GL could easily be modified to work with Emscripten.
+    We provide this to make the Emscripten differences obvious, and have them not pollute all other examples.
+
 example_glfw_opengl2/
     GLFW + OpenGL2 example (legacy, fixed pipeline).
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
@@ -221,9 +231,9 @@ example_allegro5/
     Allegro 5 example.
     = main.cpp + imgui_impl_allegro5.cpp
 
-example_freeglut_opengl2/
-    FreeGLUT + OpenGL2.
-    = main.cpp + imgui_impl_freeglut.cpp + imgui_impl_opengl2.cpp
+example_glut_opengl2/
+    GLUT (e.g., FreeGLUT on Linux/Windows, GLUT framework on OSX) + OpenGL2.
+    = main.cpp + imgui_impl_glut.cpp + imgui_impl_opengl2.cpp
 
 example_marmalade/
     Marmalade example using IwGx.
