@@ -795,6 +795,7 @@ struct ImGuiNextWindowData
         
     ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
+    inline void Clear() { PosCond = SizeCond = CollapsedCond = 0; }
 };
 
 enum ImGuiNextItemDataFlags_
@@ -999,6 +1000,7 @@ struct ImGuiContext
     float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     int                     TooltipOverrideCount;
     ImVector<char>          PrivateClipboard;                   // If no custom clipboard handler is defined
+    ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
 
     // Range-Select/Multi-Select
     // [This is unused in this branch, but left here to facilitate merging/syncing multiple branches]

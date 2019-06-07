@@ -237,8 +237,10 @@ void ImGui_ImplQt_NewFrame()
     io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
 
     // Setup time step
-    double current_time =  qtGetTime();
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
+    const double current_time = qtGetTime();
+    const float current_frame = current_time - g_Time;
+    const float frame_time = 1.0f/60.0f;
+    io.DeltaTime = std::max(current_frame, frame_time);
     g_Time = current_time;
 
     // Setup inputs

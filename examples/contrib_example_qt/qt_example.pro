@@ -14,4 +14,4 @@ RCC_DIR = build$$DBG-$$[QMAKE_SPEC]/$$TARGET
 
 SOURCES += main.cpp ../../imgui_demo.cpp
 
-include("imgui.pri")
+include("imgui_qt.pri")

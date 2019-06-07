@@ -2,6 +2,8 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 #include <imgui.h>
+#include <imgui_memory_editor/imgui_memory_editor.h>
+#include <curve_edit/imgui_curve_edit.h>
 #include "imgui_impl_qt.h"
 #include <stdio.h>
 
@@ -263,7 +265,7 @@ double qtGetTime()
 	static QElapsedTimer timer;
 	if (!timer.isValid())
 		timer.start();
-	return timer.elapsed() / 1000;
+	return timer.elapsed() / 1000.;
 }
 
 
