@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <imgui_memory_editor/imgui_memory_editor.h>
 #include <curve_edit/imgui_curve_edit.h>
+#include <terminal/Terminal.hh>
 #include "imgui_impl_qt.h"
 #include <stdio.h>
 
@@ -317,12 +318,40 @@ int main(int argc, char **argv)
         // 2. Show another simple window, this time using an explicit Begin/End pair
         if (show_another_window)
         {
-            ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiCond_FirstUseEver);
             ImGui::Text("Hello from another window!");
             if (ImGui::Button("Close Me"))
                 show_another_window = false;
             ImGui::End();
         }
+
+        // Show memory editor
+        static MemoryEditor mem_edit;
+        ImGui::SetNextWindowSize(ImVec2(200,200), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Memory editor");
+        mem_edit.DrawContents(window, sizeof(*window), (size_t)window);
+        ImGui::End();
+
+        // Show curve editor
+        ImGui::SetNextWindowSize(ImVec2(200,200), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Curve editor");
+		int flags = (int)ImGui::CurveEditorFlags::SHOW_GRID | (int)ImGui::CurveEditorFlags::NO_TANGENTS;
+        static bool fit_curve_in_editor = true;
+        if (fit_curve_in_editor)
+		{
+			flags |= (int)ImGui::CurveEditorFlags::RESET;
+			fit_curve_in_editor = false;
+		}
+		int new_count = 0, selected = 0;
+        static ImVec2 points[4] = {{0,0},{10,30},{40,10},{100,70}};
+        {
+            int changed_idx = ImGui::CurveEditor("Y", (float*)points, 4, ImVec2(-1, -1), flags, &new_count, &selected);
+        }
+		{
+            int changed_idx = ImGui::CurveEditor("S", (float*)points, 4, ImVec2(-1, -1), flags, &new_count, &selected);
+        }
+        ImGui::End();
+
 
         // 3. Show the ImGui demo window. Most of the sample code is in ImGui::ShowDemoWindow(). Read its code to learn more about Dear ImGui!
         if (show_demo_window)

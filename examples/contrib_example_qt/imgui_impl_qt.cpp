@@ -10,6 +10,8 @@
 // Qt
 #include <qdebug.h>
 #include <qopengl.h>
+#include <qclipboard.h>
+#include <qguiapplication.h>
 
 // Data
 static QImgui*      g_Window = NULL;
@@ -58,8 +60,7 @@ void ImGui_ImplQt_RenderRawData(ImDrawData* draw_data)
     glLoadIdentity();
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
-    {
+    for (int n = 0; n < draw_data->CmdListsCount; n++) {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
         const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;
         const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
@@ -67,15 +68,11 @@ void ImGui_ImplQt_RenderRawData(ImDrawData* draw_data)
         glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, uv)));
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col)));
 
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-        {
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback)
-            {
+            if (pcmd->UserCallback) {
                 pcmd->UserCallback(cmd_list, pcmd);
-            }
-            else
-            {
+            } else {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
                 glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
                 glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer);
@@ -99,13 +96,15 @@ void ImGui_ImplQt_RenderRawData(ImDrawData* draw_data)
 
 static const char* ImGui_ImplQt_GetClipboardText(void* user_data)
 {
-	// ToDo
-    return "";
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QString originalText = clipboard->text();
+    return originalText.toUtf8().constData();
 }
 
 static void ImGui_ImplQt_SetClipboardText(void* user_data, const char* text)
 {
-	// ToDo
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    clipboard->setText(text);
 }
 
 void ImGui_ImplQt_MouseButtonCallback(QImgui*, int button, int action, int /*mods*/)
@@ -177,11 +176,13 @@ void ImGui_ImplQt_InvalidateDeviceObjects()
     }
 }
 
-bool    ImGui_ImplQt_Init(QImgui* window)
+bool ImGui_ImplQt_Init(QImgui* window)
 {
     g_Window = window;
 
     ImGuiIO& io = ImGui::GetIO();
+
+    io.BackendRendererName = "qt_opengl2";
 
     // Setup back-end capabilities flags
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values (optional)
