@@ -3,7 +3,7 @@
 
 // !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
 // !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
-// !!! Prefer using GLFW or SDL instead!
+// !!! Nowadays, prefer using GLFW or SDL instead!
 
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
@@ -59,6 +59,7 @@ bool ImGui_ImplGLUT_Init()
     io.KeyMap[ImGuiKey_Space]       = ' ';
     io.KeyMap[ImGuiKey_Enter]       = 13; // == CTRL+M
     io.KeyMap[ImGuiKey_Escape]      = 27;
+    io.KeyMap[ImGuiKey_KeyPadEnter] = 13; // == CTRL+M
     io.KeyMap[ImGuiKey_A]           = 'A';
     io.KeyMap[ImGuiKey_C]           = 'C';
     io.KeyMap[ImGuiKey_V]           = 'V';
