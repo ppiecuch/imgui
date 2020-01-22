@@ -235,7 +235,7 @@ void ImGui_ImplQt_NewFrame()
     qtGetWindowSize(g_Window, &w, &h);
     qtGetFramebufferSize(g_Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
-    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
+    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 1, h > 0 ? ((float)display_h / h) : 1);
 
     // Setup time step
     const double current_time = qtGetTime();
