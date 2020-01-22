@@ -30,8 +30,82 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.74 WIP (In Progress)
+ VERSION 1.75 WIP (In Progress)
 -----------------------------------------------------------------------
+
+Breaking Changes:
+- Removed redirecting functions/enums names that were marked obsolete in 1.53 (December 2017):
+  - ShowTestWindow()                    -> use ShowDemoWindow()
+  - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
+  - IsRootWindowOrAnyChildFocused()     -> use IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+  - SetNextWindowContentWidth(w)        -> use SetNextWindowContentSize(ImVec2(w, 0.0f)
+  - GetItemsLineHeightWithSpacing()     -> use GetFrameHeightWithSpacing()
+  - ImGuiCol_ChildWindowBg              -> use ImGuiCol_ChildBg
+  - ImGuiStyleVar_ChildWindowRounding   -> use ImGuiStyleVar_ChildRounding
+  - ImGuiTreeNodeFlags_AllowOverlapMode -> use ImGuiTreeNodeFlags_AllowItemOverlap
+  - IMGUI_DISABLE_TEST_WINDOWS          -> use IMGUI_DISABLE_DEMO_WINDOWS
+  If you were still using the old names, while you are cleaning up, considering enabling
+  IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
+  and removing up old API calls, if any remaining.
+- Removed implicit default parameter to IsMouseDragging(int button = 0) to be consistent
+  with other mouse functions (none of the other functions have it).
+- Obsoleted calling ImDrawList::PrimReserve() with a negative count (which was vaguely
+  documented and rarely if ever used). Instead we added an explicit PrimUnreserve() API
+  which can be implemented faster. Also clarified pre-existing constraints which weren't
+  documented (can only unreserve from the last reserve call). If you suspect you ever
+  used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
+  calls. [@ShironekoBen]
+- Limiting Columns()/BeginColumns() api to 64 columns with an assert. While the current code
+  technically supports it, future code may not so we're putting the restriction ahead.
+- imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
+  of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by
+  adding multiple points into it, you may need to fix your initial value.
+
+Other Changes:
+- Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
+  We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
+- ColorEdit: Fix label alignment when using ImGuiColorEditFlags_NoInputs. (#2955) [@rokups]
+- ColorEdit: In HSV display of a RGB stored value, attempt to locally preserve Saturation
+  when Value==0.0 (similar to changes done in 1.73 for Hue). Removed Hue editing lock since
+  those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
+- ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
+- ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
+- ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
+  In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
+  we will rework the circle rendering functions to use textures and automatic segment count
+  selection, those new api can fill a gap. [@ShironekoBen]
+- Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- Misc: Disable format checks when using stb_printf, to allow using extra formats.
+  Made IMGUI_USE_STB_SPRINTF a properly documented imconfig.h flag. (#2954) [@loicmolinari]
+- Misc: Added misc/single_file/imgui_single_file.h, We use this to validate compiling all *.cpp
+  files in a same compilation unit. Actual users of that technique (also called "Unity builds")
+  can generally provide this themselves, so we don't really recommend you use this. [@rokups]
+- Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]
+- Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
+- Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
+  on Wayland). (#2800, #2802) [@NeroBurner]
+- Backends: GLFW, SDL: report Windows key (io.KeySuper) as always released. Neither GLFW nor SDL can
+  correctly report the key release in every cases (e.g. when using Win+V) causing problems with some
+  widgets. The next release of GLFW (3.4+) will have a fix for it. However since it is both difficult
+  and discouraged to make use of this key for Windows application anyway, we just hide it. (#2976)
+- Backends: Win32: Added support for #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD to disable all
+  XInput using code, and IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT to disable linking with XInput,
+  the later may be problematic if compiling with recent Windows SDK and you want your app to run
+  on Windows 7. You can instead try linking with Xinput9_1_0.lib instead. (#2716)
+- CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
+- Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
+  settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
+  automatically use it). (#2919, #2798)
+- Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
+  even if underlying system event loop gets paused due to app nap. (#2910, #2917) [@bear24rw]
+- Examples: Added support for glbindings OpenGL loader. (#2870) [@rokups]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.74 (Released 2019-11-25)
+-----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.74
 
 Breaking Changes:
 - Removed redirecting functions/enums names that were marked obsolete in 1.52 (October 2017):
@@ -50,6 +124,10 @@ Breaking Changes:
   Effectively it made io.KeyRepeatRate behave like it was set to (io.KeyRepeatRate + io.KeyRepeatDelay).
   Fixed the code and altered default io.KeyRepeatRate,Delay from 0.250,0.050 to 0.300,0.050 to compensate.
   If you never altered io.KeyRepeatRate nor used GetKeyPressedAmount() this won't affect you.
+- Misc: Renamed IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS to IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS. (#1038)
+- Misc: Renamed IMGUI_DISABLE_MATH_FUNCTIONS to IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS.
+- Fonts: ImFontAtlas::AddCustomRectRegular() now requires an ID larger than 0x110000 (instead of 0x10000) to
+  conform with supporting Unicode planes 1-16 in a future update. ID below 0x110000 will now assert.
 - Backends: DX12: Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
@@ -79,12 +157,15 @@ Other Changes:
 - Misc: Windows: Do not use _wfopen() if IMGUI_DISABLE_WIN32_FUNCTIONS is defined. (#2815)
 - Misc: Windows: Disabled win32 function by default when building with UWP. (#2892, #2895)
 - Misc: Using static_assert() when using C++11, instead of our own construct (avoid zealous Clang warnings).
+- Misc: Added IMGUI_DISABLE_FILE_FUNCTIONS/IMGUI_DISABLE_DEFAULT_FILE_FUNCTION to nullify or disable
+  default implementation of ImFileXXX functions linking with fopen/fclose/fread/fwrite. (#2734)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
+- Docs: Moved misc/fonts/README.txt to docs/FONTS.txt.
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
+- Metrics: Show wire-frame mesh and approximate surface area when hovering ImDrawCmd. [@ShironekoBen]
 - Metrics: Expose basic details of each window key/value state storage.
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
-- Examples: Emscripten: Removed NO_FILESYSTEM from Makefile, seems to fail on some setup. (#2734) [@Funto]
 - Examples: Emscripten: Removed BINARYEN_TRAP_MODE=clamp from Makefile which was removed in Emscripten 1.39.0
   but required prior to 1.39.0, making life easier for absolutely no-one. (#2877, #2878) [@podsvirov]
 - Backends: OpenGL3: Fix building with pre-3.2 GL loaders which do not expose glDrawElementsBaseVertex(),
@@ -99,12 +180,14 @@ Other Changes:
  VERSION 1.73 (Released 2019-09-24)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.73
+
 Other Changes:
 
 - Nav, Scrolling: Added support for Home/End key. (#787)
 - ColorEdit: Disable Hue edit when Saturation==0 instead of letting Hue values jump around.
 - ColorEdit, ColorPicker: In HSV display of a RGB stored value, attempt to locally preserve Hue
-  when Saturation==0, which reduces accidentally lossy interactions. (#2722, 2770) [@rokups]
+  when Saturation==0, which reduces accidentally lossy interactions. (#2722, #2770) [@rokups]
 - ColorPicker: Made rendering aware of global style alpha of the picker can be faded out. (#2711)
   Note that some elements won't accurately fade down with the same intensity, and the color wheel
   when enabled will have small overlap glitches with (style.Alpha < 1.0).
@@ -159,6 +242,8 @@ Other Changes:
  VERSION 1.72b (Released 2019-07-31)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72b
+
 Other Changes:
 
 - Nav, Scrolling: Fixed programmatic scroll leading to a slightly incorrect scroll offset when
@@ -173,6 +258,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.72 (Released 2019-07-27)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72
 
 Breaking Changes:
 - Removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017):
@@ -255,6 +342,8 @@ Other Changes:
  VERSION 1.71 (Released 2019-06-12)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.71
+
 Breaking Changes:
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
@@ -307,11 +396,11 @@ Other Changes:
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
 - Log/Capture: Fixed BeginTabItem() label not being included in a text log/capture.
-- ImDrawList: Added ImDrawCmd::VtxOffset value to support large meshes (64k+ vertices) using 16-bits indices.
+- ImDrawList: Added ImDrawCmd::VtxOffset value to support large meshes (64k+ vertices) using 16-bit indices.
   The renderer back-end needs to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' to enable
   this, and honor the ImDrawCmd::VtxOffset field. Otherwise the value will always be zero.
   This has the advantage of preserving smaller index buffers and allowing to execute on hardware that do not
-  support 32-bits indices. Most examples back-ends have been modified to support the VtxOffset field.
+  support 32-bit indices. Most examples back-ends have been modified to support the VtxOffset field.
 - ImDrawList: Added ImDrawCmd::IdxOffset value, equivalent to summing element count for each draw command.
   This is provided for convenience and consistency with VtxOffset.
 - ImDrawCallback: Allow to override the signature of ImDrawCallback by #define-ing it. This is meant to
@@ -325,7 +414,7 @@ Other Changes:
   dealing with Win32, and to facilitate integration in custom engines. (#2546) [@andrewwillmott]
 - Backends: OSX: imgui_impl_osx: Added mouse cursor support. (#2585, #1873) [@actboy168]
 - Examples/Backends: DirectX9/10/11/12, Metal, Vulkan, OpenGL3 (Desktop GL only): Added support for large meshes
-  (64k+ vertices) with 16-bits indices, enable 'ImGuiBackendFlags_RendererHasVtxOffset' in those back-ends.
+  (64k+ vertices) with 16-bit indices, enable 'ImGuiBackendFlags_RendererHasVtxOffset' in those back-ends.
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
   support. (#2538, #2541)
@@ -334,6 +423,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.70 (Released 2019-05-06)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.70
 
 Breaking Changes:
 - ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness
@@ -422,6 +513,8 @@ Other Changes:
  VERSION 1.69 (Released 2019-03-13)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.69
+
 Breaking Changes:
 
 - Renamed ColorEdit/ColorPicker's ImGuiColorEditFlags_RGB/_HSV/_HEX flags to respectively
@@ -498,6 +591,8 @@ Other Changes:
  VERSION 1.68 (Released 2019-02-19)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.68
+
 Breaking Changes:
 
 - Removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
@@ -566,6 +661,8 @@ Other Changes:
  VERSION 1.67 (Released 2019-01-14)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.67
+
 Breaking Changes:
 
 - Made it illegal to call Begin("") with an empty string. This somehow half-worked before but had various undesirable
@@ -629,6 +726,8 @@ Other Changes:
  VERSION 1.66b (Released 2018-12-01)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66b
+
 Other Changes:
 
 - Fixed a text rendering/clipping bug introduced in 1.66 (on 2018-10-12, commit ede3a3b9) that affect single ImDrawList::AddText()
@@ -645,6 +744,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.66 (Released 2018-11-22)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66
 
 Breaking Changes:
 
@@ -705,6 +806,8 @@ Other Changes:
  VERSION 1.65 (Released 2018-09-06)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.65
+
 Breaking Changes:
 
 - Renamed stb_truetype.h to imstb_truetype.h, stb_textedit.h to imstb_textedit.h, and
@@ -729,6 +832,8 @@ Other Changes:
  VERSION 1.64 (Released 2018-08-31)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.64
+
 Changes:
 
 - Moved README, CHANGELOG and TODO files to the docs/ folder.
@@ -750,6 +855,8 @@ Changes:
 -----------------------------------------------------------------------
  VERSION 1.63 (Released 2018-08-29)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.63
 
 Breaking Changes:
 
@@ -843,6 +950,8 @@ Other Changes:
  VERSION 1.62 (Released 2018-06-22)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.62
+
 Breaking Changes:
 
 - TreeNodeEx(): The helper ImGuiTreeNodeFlags_CollapsingHeader flag now include ImGuiTreeNodeFlags_NoTreePushOnOpen.
@@ -921,6 +1030,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.61 (Released 2018-05-14)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.61
 
 Breaking Changes:
 
@@ -1732,7 +1843,7 @@ Changes:
 - Fixed border rendering in various situations when using non-pixel aligned glyphs.
 - Fixed border rendering of windows to always contain the border within the window.
 - Fixed Shutdown() leaking font atlas data if NewFrame() was never called. (#396, #303)
-- Fixed int>void\* warnings for 64-bits architectures with fancy warnings enabled.
+- Fixed int>void\* warnings for 64-bit architectures with fancy warnings enabled.
 - Renamed the dubious Color() helpers to ValueColor() - dangerously named, rarely used and probably to be made obsolete.
 - InputText(): Fixed and better handling of using keyboard while mouse button if being held and dragging. (#429)
 - InputText(): Replace OS IME (Input Method Editor) cursor on top-left when we are not text editing.
