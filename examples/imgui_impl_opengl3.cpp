@@ -100,14 +100,14 @@
 
 // GL includes
 #if defined(OPENGL_GLES_BC)
-#include <opengl_gles_bc.h>
+# include <opengl_gles_bc.h>
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
-#include <GLES2/gl2.h>
+# include <GLES2/gl2.h>
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
-#include <OpenGLES/ES3/gl.h>    // Use GL ES 3
+# include <OpenGLES/ES3/gl.h>    // Use GL ES 3
 #else
-#include <GLES3/gl3.h>          // Use GL ES 3
+# include <GLES3/gl3.h>          // Use GL ES 3
 #endif
 #else
 // About Desktop OpenGL function loaders:
