@@ -1,4 +1,4 @@
-// Wrapper to use FreeType (instead of stb_truetype) for Dear ImGui
+// dear imgui: wrapper to use FreeType (instead of stb_truetype)
 // Get latest version at https://github.com/ocornut/imgui/tree/master/misc/freetype
 // Original code by @vuhdo (Aleksei Skriabin). Improvements by @mikesart. Maintained and v0.60+ by @ocornut.
 
@@ -280,7 +280,7 @@ namespace
 
 #ifndef STB_RECT_PACK_IMPLEMENTATION                        // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
 #ifndef IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
-#define STBRP_ASSERT(x)     IM_ASSERT(x)
+#define STBRP_ASSERT(x)     do { IM_ASSERT(x); } while (0)
 #define STBRP_STATIC
 #define STB_RECT_PACK_IMPLEMENTATION
 #endif
