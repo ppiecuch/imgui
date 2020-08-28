@@ -3,7 +3,7 @@
 
 #include <imgui.h>
 #include <imgui_memory_editor/imgui_memory_editor.h>
-#include <curve_edit/imgui_curve_edit.h>
+#include <imgui_curve_edit/imgui_curve_edit.h>
 #include <terminal/Terminal.hh>
 #include "imgui_impl_qt.h"
 #include <stdio.h>
